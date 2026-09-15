@@ -39,3 +39,57 @@ contain application business logic.
 3. Terraform validation, Checkov, AWS OIDC, and deployment
 4. OPA/Conftest policy enforcement
 5. Deliberately vulnerable fixture validation
+
+## Getting started
+
+Run these commands from the repository root.
+
+### Install local tools
+
+On Linux or macOS, use the bootstrap script:
+
+```bash
+bash scripts/bootstrap-security-tools.sh
+```
+
+On Windows, install the equivalent tools using your preferred package manager
+or run them in WSL. The required tools are:
+
+- Git
+- Docker
+- pre-commit
+- Gitleaks
+- TruffleHog
+- Semgrep
+- Trivy
+- Hadolint
+- Syft
+- Cosign
+- Checkov
+- Terraform
+- Conftest
+
+Verify the installation:
+
+```bash
+gitleaks version
+trivy --version
+semgrep --version
+hadolint --version
+syft version
+cosign version
+checkov --version
+terraform version
+conftest --version
+pre-commit --version
+```
+
+### Enable pre-commit hooks
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```
+
+The hooks are intentionally strict. A real secret, a high-severity finding,
+or an applicable SAST match should stop the local commit.
