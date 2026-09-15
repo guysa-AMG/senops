@@ -93,3 +93,46 @@ pre-commit run --all-files
 
 The hooks are intentionally strict. A real secret, a high-severity finding,
 or an applicable SAST match should stop the local commit.
+
+## GitHub Actions workflows
+
+The workflows are separated by responsibility:
+
+| Workflow | Trigger | Controls |
+| --- | --- | --- |
+| `phase1-secret-sast-sca.yml` | Pull requests and pushes to `main` | Gitleaks, TruffleHog, Semgrep, and Trivy filesystem scanning |
+| `phase2-docker-security.yml` | Docker-related changes | Hadolint, image vulnerability scanning, Syft, and Cosign |
+| `phase3-terraform-aws.yml` | Terraform changes on `main` or manual dispatch | Checkov, Terraform validation and plan, AWS OIDC, and Secrets Manager access |
+| `phase4-policy-gates.yml` | Pull requests and pushes to `main` | Conftest policy checks |
+| `phase5-demo-validation.yml` | Pull requests and pushes to `main` | Presence checks for the validation fixtures |
+
+Before enabling deployment, replace the placeholder AWS role ARN and repository
+subject in `phase3-terraform-aws.yml`. The IAM role must trust only the
+intended GitHub organization, repository, branch, and OIDC audience.
+
+## Branch protection
+
+Protect the `main` branch in the repository settings:
+
+1. Require pull requests before merging.
+2. Require status checks before merging.
+3. Require the security workflows to pass.
+4. Require approval from at least one reviewer.
+5. Prevent force pushes and branch deletion.
+
+Use the exact check names shown by the completed workflow runs when configuring
+required status checks.
+
+## Container supply chain
+
+The root `Dockerfile` demonstrates a non-root runtime user and a minimized
+runtime package set. The image workflow:
+
+1. Lints the Dockerfile.
+2. Builds the image.
+3. Blocks high and critical vulnerabilities.
+4. Generates an SPDX SBOM.
+5. Signs the image with keyless Cosign signing.
+6. Verifies the signature against the GitHub Actions OIDC issuer.
+
+Do not deploy an image unless its digest is scanned, signed, and verified.
