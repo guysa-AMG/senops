@@ -136,3 +136,68 @@ runtime package set. The image workflow:
 6. Verifies the signature against the GitHub Actions OIDC issuer.
 
 Do not deploy an image unless its digest is scanned, signed, and verified.
+
+## Terraform and AWS identity
+
+The Terraform templates provide a starting point for secure infrastructure:
+
+- S3 public access is blocked.
+- S3 versioning is enabled.
+- Security group ingress is restricted to the configured VPC CIDR.
+- GitHub Actions authenticates to AWS through OIDC.
+- Runtime secrets are retrieved from AWS Secrets Manager.
+
+The templates contain environment-specific placeholders. Review and replace
+the account ID, repository subject, region, resource names, state backend, and
+least-privilege IAM permissions before applying them.
+
+## Policy gates
+
+The policies in `policy/` require:
+
+- A signed image.
+- Zero critical CVEs.
+- A non-root container user.
+
+Run the policy checks locally:
+
+```bash
+conftest test --policy policy/ policy/approved-image.json
+conftest test --policy policy/ policy/rejected-image.json
+```
+
+The approved fixture should pass. The rejected fixture should fail.
+
+## Demo validation
+
+The `demo/` directory contains intentionally insecure fixtures:
+
+- `demo/secrets/.env` contains fake hardcoded credentials.
+- `demo/sast/` contains SSRF and SQL injection examples.
+- `demo/iac/main.tf` enables public S3 access.
+- `demo/container/Dockerfile` runs as `root`.
+
+Run the validation script:
+
+```bash
+bash scripts/validate-demo.sh
+```
+
+Expected scanner failures prove that the gates detect the targeted classes of
+problems. Do not use the demo fixtures as application or deployment assets.
+
+## Production readiness checklist
+
+- Replace all placeholder AWS values.
+- Configure a remote, locked Terraform state backend.
+- Restrict the AWS OIDC trust policy to the production repository and branch.
+- Grant only the permissions required by Terraform and secret retrieval.
+- Configure branch protection and required status checks.
+- Store no credentials in repository files or long-lived GitHub secrets.
+- Review scanner findings and establish an approved vulnerability exception
+  process.
+- Retain SBOMs and signing evidence as release artifacts.
+- Remove or isolate the intentionally vulnerable demo fixtures before release.
+
+For the full phase-by-phase procedure, see
+[`SECURITY_PIPELINE_SETUP.md`](SECURITY_PIPELINE_SETUP.md).
