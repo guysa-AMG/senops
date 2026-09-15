@@ -1,0 +1,25 @@
+name: phase5-demo-validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  fail-demo-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify demo secrets present
+        run: |
+          test -f demo/secrets/.env
+          test -f demo/sast/ssrf.py
+          test -f demo/iac/main.tf
+          test -f demo/container/Dockerfile
+
+      - name: Demonstrate expected security failures
+        run: |
+          echo "These demo artifacts are intentionally insecure and are only for validation." 
+          echo "Run each scanner locally against the demo folder to confirm it fails as expected."

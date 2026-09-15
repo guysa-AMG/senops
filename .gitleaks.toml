@@ -1,0 +1,30 @@
+title = "gitleaks config"
+
+[allowlist]
+description = "Ignore generated files and docs"
+paths = [
+  '''^\.github/workflows/.*$''',
+  '''^docs/.*$''',
+  '''^vendor/.*$''',
+  '''^node_modules/.*$''',
+  '''^dist/.*$''',
+  '''^build/.*$'''
+]
+
+[[rules]]
+id = "aws-access-token"
+description = "AWS access token"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["key", "AWS"]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API key"
+regex = '''(?i)(api[_-]?key|secret[_-]?key|token)[[:space:]]*[:=][[:space:]]*["'][^"']{8,}["']'''
+tags = ["key", "secret"]
+
+[[rules]]
+id = "private-key"
+description = "Private key"
+regex = '''-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'''
+tags = ["key", "private"]

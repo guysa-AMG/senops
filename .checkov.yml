@@ -1,0 +1,7 @@
+directory:
+  - infra/terraform
+quiet: true
+download-external-modules: true
+external-modules-dir: .external_modules
+framework:
+  - terraform

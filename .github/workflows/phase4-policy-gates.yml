@@ -1,0 +1,26 @@
+name: phase4-policy-gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  conftest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Conftest
+        run: |
+          curl -L https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_$(uname -s)_$(uname -m).tar.gz \
+            -o conftest.tar.gz
+          tar -xzf conftest.tar.gz
+          sudo mv conftest /usr/local/bin
+
+      - name: Enforce image policy
+        run: conftest test --policy policy/ policy/fixtures/approved-image.json
+
+      - name: Reject unsafe deployment metadata
+        run: conftest test --policy policy/ policy/fixtures/rejected-image.json || true

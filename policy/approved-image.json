@@ -1,0 +1,12 @@
+{
+  "kind": "deployment",
+  "metadata": {
+    "name": "approved-image"
+  },
+  "spec": {
+    "image": "ghcr.io/example/app:sha256-123abc",
+    "signed": true,
+    "user": "appuser",
+    "critical_cves": 0
+  }
+}

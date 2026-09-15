@@ -1,0 +1,26 @@
+rules:
+  - id: python-sqli
+    languages: [python]
+    message: "Possible SQL injection or unsafe query construction"
+    severity: ERROR
+    pattern-either:
+      - pattern: "execute(f'...')"
+      - pattern: "cursor.execute(...)"
+      - pattern: "SELECT ... + user_input"
+
+  - id: node-ssrf
+    languages: [javascript]
+    message: "Possible SSRF pattern via untrusted URL input"
+    severity: ERROR
+    pattern-either:
+      - pattern: "fetch(req.query.url)"
+      - pattern: "axios.get(userInput)"
+      - pattern: "http.request(req.body.url)"
+
+  - id: command-injection
+    languages: [python]
+    message: "Possible command injection via shell execution with untrusted input"
+    severity: ERROR
+    pattern-either:
+      - pattern: "subprocess.run(user_input, shell=True)"
+      - pattern: "os.system(user_input)"

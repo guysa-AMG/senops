@@ -1,0 +1,96 @@
+name: phase2-docker-security
+
+on:
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.github/workflows/phase2-docker-security.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.github/workflows/phase2-docker-security.yml'
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  lint-dockerfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+  scan-image:
+    needs: lint-dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }} .
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+  sbom-sign:
+    needs: scan-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push image
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }} .
+          docker push ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }}
+
+      - name: Generate SBOM
+        run: syft ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }} -o spdx-json=sbom.spdx.json
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.6.0
+
+      - name: Sign image
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign --yes ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }} \
+            --tlog-upload=true \
+            --annotations "repo=${{ github.repository }}" \
+            --annotations "sha=${{ github.sha }}"
+
+      - name: Verify image signature
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign verify ghcr.io/${{ github.repository_owner }}/app:${{ github.sha }} \
+            --certificate-identity-regexp "https://github.com/.*/.*/.github/workflows/.*" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com

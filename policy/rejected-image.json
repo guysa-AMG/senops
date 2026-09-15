@@ -1,0 +1,12 @@
+{
+  "kind": "deployment",
+  "metadata": {
+    "name": "rejected-image"
+  },
+  "spec": {
+    "image": "ghcr.io/example/app:sha256-999xyz",
+    "signed": false,
+    "user": "root",
+    "critical_cves": 2
+  }
+}
